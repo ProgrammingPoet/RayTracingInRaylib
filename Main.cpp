@@ -9,13 +9,12 @@ constexpr int SCREENHIEGHT = 720;
 
 struct LINE {
 	float x1, y1, x2, y2;
+	float RAYALPHA = 1.0f;
 };
 
 std::vector<LINE> WALLS;
 std::vector<LINE> RAYS;
 std::vector<char> SHAPE;
-float RAYALPHA = 1.0f;
-float INNERALPHA = 0.5f;
 
 
 
@@ -135,25 +134,27 @@ RAYINFO GetRayIntersection(LINE RAY) {
 
 void BounceRay(LINE RAY, RAYINFO HITINFO);
 
-void EvaluateRay(LINE RAY, bool PROCESSBOUNCE = true) {
+void EvaluateRay(LINE RAY, bool BOUNCERAY = false) {
 	RAYINFO HITINFO = GetRayIntersection(RAY);
 	if (HITINFO.HIT) {
+		rlColor4f(0.0f, 0.0f, 1.0f, RAY.RAYALPHA);
 		rlVertex2f(RAY.x1, RAY.y1);
 		rlVertex2f(RAY.x1 + HITINFO.LEASTMULTIPLIER * (RAY.x2 - RAY.x1), RAY.y1 + HITINFO.LEASTMULTIPLIER * (RAY.y2 - RAY.y1));
-		if (HITINFO.HITTYPE == 'E') {
-			rlColor4f(1.0f, 0.0f, 0.0f, INNERALPHA);
+		if (HITINFO.HITTYPE == 'E' && !BOUNCERAY) {
+			RAY.RAYALPHA /= 4;
+			rlColor4f(1.0f, 0.0f, 0.0f, RAY.RAYALPHA);
 			rlVertex2f(RAY.x1 + HITINFO.LEASTMULTIPLIER * (RAY.x2 - RAY.x1), RAY.y1 + HITINFO.LEASTMULTIPLIER * (RAY.y2 - RAY.y1));
 			rlVertex2f(RAY.x1 + HITINFO.GREATESTMULTIPLIER * (RAY.x2 - RAY.x1), RAY.y1 + HITINFO.GREATESTMULTIPLIER * (RAY.y2 - RAY.y1));
-			rlColor4f(0.0f, 0.0f, 1.0f, RAYALPHA);
 			
-		}else if (HITINFO.HITTYPE == 'W') {
+		} else if (HITINFO.HITTYPE == 'W') {
+			rlColor4f(0.0f, 0.0f, 1.0f, RAY.RAYALPHA);
 			rlVertex2f(RAY.x1, RAY.y1);
 			rlVertex2f(RAY.x1 + HITINFO.LEASTMULTIPLIER * (RAY.x2 - RAY.x1), RAY.y1 + HITINFO.LEASTMULTIPLIER * (RAY.y2 - RAY.y1));
-			rlColor4f(0.0f, 0.0f, 1.0f, RAYALPHA);
 		}
-		if (PROCESSBOUNCE) {
+		if (!BOUNCERAY) {
 			RAY.x2 = RAY.x1 + HITINFO.LEASTMULTIPLIER * (RAY.x2 - RAY.x1);
 			RAY.y2 = RAY.y1 + HITINFO.LEASTMULTIPLIER * (RAY.y2 - RAY.y1);
+			RAY.RAYALPHA /= 20;
 			BounceRay(RAY, HITINFO);
 		}
 	}
@@ -189,14 +190,14 @@ void BounceRay(LINE RAY, RAYINFO HITINFO) {
 	BOUNCERAY.y1 = BOUNCERAY.y1 + (BOUNCEdy * OFFSET);
 	BOUNCERAY.y2 = BOUNCEdy * RAYEMITTER.RAYLENGTH + BOUNCERAY.y1;
 	BOUNCERAY.x2 = BOUNCEdx * RAYEMITTER.RAYLENGTH + BOUNCERAY.x1;
-	EvaluateRay(BOUNCERAY, false);
+	BOUNCERAY.RAYALPHA = RAY.RAYALPHA;
+	EvaluateRay(BOUNCERAY, true);
 }
 
 
 
 void DoRayTracing() {
 	rlBegin(RL_LINES);
-	rlColor4f(0.0f, 0.0f, 1.0f, RAYALPHA);
 	CreateRays();
 	for (int RAYINDEX = 0; RAYINDEX < RAYEMITTER.NUMBEROFRAYS; RAYINDEX++) {
 		LINE RAY = RAYS[RAYINDEX];
